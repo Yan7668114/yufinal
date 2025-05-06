@@ -187,7 +187,7 @@ with st.sidebar:
     
     # 獲取當前應用URL (在部署後會有實際URL)
     # 本地測試時將使用範例URL
-    app_url = st.query_params.get("app_url", ["https://streamlit.io/"])[0]
+    app_url = st.query_params.get("app_url", ["https://yuhaha.streamlit.app/"])[0]
     
     qr_code = generate_qr_code(app_url)
     st.image(qr_code, caption="掃描此QR碼訪問留言板", width=200)
