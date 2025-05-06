@@ -1,0 +1,11 @@
+streamlit
+gspread
+google-auth
+pandas
+pytz
+Pillow
+qrcode
+wordcloud
+matplotlib
+altair
+numpy
