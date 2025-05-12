@@ -12,14 +12,16 @@ import time
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import matplotlib
+import streamlit.components.v1 as components
 from typing import Tuple
+
+# 中文節假日偵測
 try:
     from chinese_calendar import is_holiday, get_holiday_detail  # 正確導入函數
 except ImportError:
     # 如果無法導入，提供替代函數
     def is_holiday(_):
         return False
-    
     def get_holiday_detail(_):
         return False, None
 
@@ -43,7 +45,6 @@ def detect_season_or_festival() -> Tuple[str, str]:
     """
     檢測當前日期所屬的季節或特定節日，並返回對應的主題名稱和描述
     節日優先級高於季節。
-    
     Returns:
         Tuple[str, str]: (主題標識, 主題描述)
     """
@@ -52,64 +53,52 @@ def detect_season_or_festival() -> Tuple[str, str]:
     now = datetime.now(tw_timezone)
     current_month = now.month
     current_day = now.day
-    
+
     # 嘗試使用chinese_calendar庫檢測節日
     try:
         if is_holiday(now.date()):
             _, holiday_name = get_holiday_detail(now.date())
             if holiday_name:
-                # 根據節日名稱判斷對應主題
-                if any(name in str(holiday_name) for name in ['春節', '除夕', '初一', '大年初']):
+                holiday_name = str(holiday_name)
+                if any(name in holiday_name for name in ['春節', '除夕', '初一', '大年初']):
                     return Theme.CHINESE_NEW_YEAR, "春節主題：喜慶的紅金配色，象徵新年的祝福與喜悅"
-                elif '清明' in str(holiday_name):
+                elif '清明' in holiday_name:
                     return Theme.QINGMING, "清明節主題：清新綠色，象徵生機與懷念"
-                elif '端午' in str(holiday_name):
+                elif '端午' in holiday_name:
                     return Theme.DRAGON_BOAT, "端午節主題：代表端午的五彩裝飾與艾草綠"
-                elif '中秋' in str(holiday_name):
+                elif '中秋' in holiday_name:
                     return Theme.MID_AUTUMN, "中秋節主題：皎潔的月色和溫暖的燈籠橘"
     except Exception:
-        # 若chinese_calendar使用失敗，則略過
         pass
-    
+
     # 手動判斷主要節日作為備用方案
-    # 春節通常在1-2月，但具體日期每年不同，這裡僅粗略判斷
     if (current_month == 1 and current_day >= 20) or (current_month == 2 and current_day <= 20):
         return Theme.CHINESE_NEW_YEAR, "春節主題：喜慶的紅金配色，象徵新年的祝福與喜悅"
-    
-    # 清明節 (4月4日或5日)
-    if current_month == 4 and (current_day == 4 or current_day == 5):
+    if current_month == 4 and current_day in (4, 5):
         return Theme.QINGMING, "清明節主題：清新綠色，象徵生機與懷念"
-    
-    # 端午節 (5月底或6月初)
     if (current_month == 5 and current_day >= 25) or (current_month == 6 and current_day <= 5):
         return Theme.DRAGON_BOAT, "端午節主題：代表端午的五彩裝飾與艾草綠"
-    
-    # 中秋節 (9月中旬至下旬)
     if current_month == 9 and 15 <= current_day <= 25:
         return Theme.MID_AUTUMN, "中秋節主題：皎潔的月色和溫暖的燈籠橘"
-    
-    # 聖誕節 (12月中下旬)
     if current_month == 12 and 15 <= current_day <= 31:
         return Theme.CHRISTMAS, "聖誕節主題：紅綠相間的經典聖誕配色與雪花點綴"
-    
-    # 如果不是特殊節日，則按季節判斷
+
+    # 季節判斷
     if 3 <= current_month <= 5:
         return Theme.SPRING, "春季主題：嫩綠漸變背景配以淡雅花朵點綴"
     elif 6 <= current_month <= 8:
         return Theme.SUMMER, "夏季主題：海藍漸變背景搭配明亮陽光元素"
     elif 9 <= current_month <= 11:
         return Theme.AUTUMN, "秋季主題：暖橙褐色背景與秋葉圖案"
-    else:  # 12, 1, 2月
+    else:
         return Theme.WINTER, "冬季主題：冰藍色背景與雪花圖案"
 
 # 為特定主題加載CSS樣式
 def load_css_for_theme(theme: str) -> str:
     """
     根據指定的主題名稱，返回對應的CSS樣式定義
-    
     Args:
         theme (str): 主題名稱
-        
     Returns:
         str: CSS樣式字符串
     """
@@ -117,307 +106,134 @@ def load_css_for_theme(theme: str) -> str:
         return """
         /* 春季主題 - 嫩綠漸變背景與花朵點綴 */
         background: linear-gradient(120deg, #e0f7fa, #c8e6c9) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #388e3c !important;
-        }
-        
-        .stButton button {
-            background-color: #66bb6a !important;
-            border: 1px solid #43a047 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #43a047 !important;
-        }
-        
+        h1, h2, h3 { color: #388e3c !important; }
+        .stButton button { background-color: #66bb6a !important; border: 1px solid #43a047 !important; }
+        .stButton button:hover { background-color: #43a047 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.85);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
         """
-    
     elif theme == Theme.SUMMER:
         return """
         /* 夏季主題 - 海藍漸變背景與陽光元素 */
         background: linear-gradient(120deg, #bbdefb, #4fc3f7) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #0277bd !important;
-        }
-        
-        .stButton button {
-            background-color: #29b6f6 !important;
-            border: 1px solid #0288d1 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #0288d1 !important;
-        }
-        
+        h1, h2, h3 { color: #0277bd !important; }
+        .stButton button { background-color: #29b6f6 !important; border: 1px solid #0288d1 !important; }
+        .stButton button:hover { background-color: #0288d1 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.8);
         padding: 2rem;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         """
-    
     elif theme == Theme.AUTUMN:
         return """
         /* 秋季主題 - 暖橙背景與木質紋理 */
         background: linear-gradient(120deg, #ffe0b2, #ffab91) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #e65100 !important;
-        }
-        
-        .stButton button {
-            background-color: #ff8a65 !important;
-            border: 1px solid #e64a19 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #e64a19 !important;
-        }
-        
+        h1, h2, h3 { color: #e65100 !important; }
+        .stButton button { background-color: #ff8a65 !important; border: 1px solid #e64a19 !important; }
+        .stButton button:hover { background-color: #e64a19 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.85);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-        border-left: 5px solid #bf360c;
         """
-    
     elif theme == Theme.WINTER:
         return """
-        /* 冬季主題 - 雪花浅藍背景与冰晶效果 */
+        /* 冬季主題 - 冰藍背景與雪花 */
         background: linear-gradient(120deg, #e3f2fd, #bbdefb) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #1565c0 !important;
-        }
-        
-        .stButton button {
-            background-color: #42a5f5 !important;
-            border: 1px solid #1976d2 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #1976d2 !important;
-        }
-        
+        h1, h2, h3 { color: #1565c0 !important; }
+        .stButton button { background-color: #42a5f5 !important; border: 1px solid #1976d2 !important; }
+        .stButton button:hover { background-color: #1976d2 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(200, 230, 255, 0.8);
         """
-    
     elif theme == Theme.CHINESE_NEW_YEAR:
         return """
         /* 春節主題 - 喜慶紅金配色 */
         background: linear-gradient(120deg, #b71c1c, #d32f2f) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #ffd700 !important;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-        }
-        
-        .stButton button {
-            background-color: #ffc107 !important;
-            border: 1px solid #ff8f00 !important;
-            color: #b71c1c !important;
-            font-weight: bold;
-        }
-        
-        .stButton button:hover {
-            background-color: #ff8f00 !important;
-        }
-        
+        h1, h2, h3 { color: #ffd700 !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .stButton button { background-color: #ffc107 !important; border: 1px solid #ff8f00 !important; color: #b71c1c !important; font-weight: bold; }
+        .stButton button:hover { background-color: #ff8f00 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-        border: 2px solid #ffd700;
         """
-    
     elif theme == Theme.QINGMING:
         return """
         /* 清明節主題 - 清新綠色 */
         background: linear-gradient(120deg, #e8f5e9, #c8e6c9) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #2e7d32 !important;
-        }
-        
-        .stButton button {
-            background-color: #66bb6a !important;
-            border: 1px solid #43a047 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #43a047 !important;
-        }
-        
+        h1, h2, h3 { color: #2e7d32 !important; }
+        .stButton button { background-color: #66bb6a !important; border: 1px solid #43a047 !important; }
+        .stButton button:hover { background-color: #43a047 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-        border-left: 4px solid #2e7d32;
         """
-    
     elif theme == Theme.DRAGON_BOAT:
         return """
-        /* 端午節主題 - 五彩裝飾與艾草綠 */
+        /* 端午節主題 - 艾草綠 */
         background: linear-gradient(120deg, #e8f5e9, #81c784) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #1b5e20 !important;
-        }
-        
-        .stButton button {
-            background-color: #4caf50 !important;
-            border: 1px solid #388e3c !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #388e3c !important;
-        }
-        
+        h1, h2, h3 { color: #1b5e20 !important; }
+        .stButton button { background-color: #4caf50 !important; border: 1px solid #388e3c !important; }
+        .stButton button:hover { background-color: #388e3c !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-        border: 2px solid #4caf50;
-        border-style: dashed;
         """
-    
     elif theme == Theme.MID_AUTUMN:
         return """
-        /* 中秋節主題 - 月色和燈籠橘 */
+        /* 中秋節主題 - 月色橘 */
         background: linear-gradient(120deg, #37474f, #263238) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #ffb74d !important;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-        }
-        
-        .stButton button {
-            background-color: #ff9800 !important;
-            border: 1px solid #f57c00 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #f57c00 !important;
-        }
-        
+        h1, h2, h3 { color: #ffb74d !important; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+        .stButton button { background-color: #ff9800 !important; border: 1px solid #f57c00 !important; }
+        .stButton button:hover { background-color: #f57c00 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        border: 2px solid #ff9800;
         """
-    
     elif theme == Theme.CHRISTMAS:
         return """
-        /* 聖誕節主題 - 紅綠相間與雪花點綴 */
+        /* 聖誕節主題 - 紅綠配色與雪花 */
         background: linear-gradient(120deg, #d32f2f, #1b5e20) !important;
-        background-attachment: fixed !important;
-        position: relative;
-        
-        h1, h2, h3 {
-            color: #ffeb3b !important;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-        }
-        
-        .stButton button {
-            background-color: #f44336 !important;
-            border: 1px solid #d32f2f !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #d32f2f !important;
-        }
-        
+        h1, h2, h3 { color: #ffeb3b !important; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+        .stButton button { background-color: #f44336 !important; border: 1px solid #d32f2f !important; }
+        .stButton button:hover { background-color: #d32f2f !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        border: 3px solid #f44336;
-        border-style: dashed;
         """
-    
     else:
-        # 默認主題，在主題檢測失敗時使用
         return """
-        /* 默認主題 - 簡潔現代風格 */
+        /* 預設主題 - 現代簡約 */
         background: linear-gradient(120deg, #f5f7fa, #e4e8f1) !important;
-        background-attachment: fixed !important;
-        
-        h1, h2, h3 {
-            color: #1E88E5 !important;
-        }
-        
-        .stButton button {
-            background-color: #1E88E5 !important;
-            border: 1px solid #1976D2 !important;
-        }
-        
-        .stButton button:hover {
-            background-color: #1976D2 !important;
-        }
-        
+        h1, h2, h3 { color: #1E88E5 !important; }
+        .stButton button { background-color: #1E88E5 !important; border: 1px solid #1976D2 !important; }
+        .stButton button:hover { background-color: #1976D2 !important; }
         border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.9);
         padding: 2rem;
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
         """
 
 # 為聖誕節主題創建雪花
 def create_snowflakes() -> str:
-    """
-    為聖誕節主題創建雪花HTML元素
-    
-    Returns:
-        str: 包含雪花元素的HTML字符串
-    """
     snowflakes = ""
-    for i in range(20):  # 創建20個雪花
+    for i in range(20):
         size = random.uniform(0.5, 1.5)
         left = random.uniform(0, 100)
         opacity = random.uniform(0.3, 1)
         delay = random.uniform(0, 5)
         duration = random.uniform(5, 15)
-        
         snowflakes += f"""
-        <div class="snowflake" style="
+        <div class=\"snowflake\" style=\"
             left: {left}%;
             opacity: {opacity};
             font-size: {size}em;
             animation-duration: {duration}s;
             animation-delay: {delay}s;
-            pointer-events: none;
-            z-index: -2;
-        ">❄</div>
+        \">❄</div>
         """
-    
     return snowflakes
 
-# 設定頁面佈局與主題
+# 頁面設定
 st.set_page_config(
     page_title="游佳驥很屌的留言板",
     page_icon="💬",
@@ -425,211 +241,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 檢測當前季節或節日並應用相應主題
+# 檢測主題
 try:
     current_theme, theme_description = detect_season_or_festival()
 except Exception as e:
-    st.error(f"無法檢測日期或節日: {e}")
-    current_theme, theme_description = Theme.DEFAULT, "預設主題：簡潔現代風格"
+    st.error(f"無法檢測主題: {e}")
+    current_theme, theme_description = Theme.DEFAULT, "預設主題：現代簡约风"
 
-# 定義主題圖標對應
 theme_icons = {
-    Theme.SPRING: "🌸",
-    Theme.SUMMER: "🌞",
-    Theme.AUTUMN: "🍂",
-    Theme.WINTER: "❄️",
-    Theme.CHINESE_NEW_YEAR: "🧧",
-    Theme.QINGMING: "🌿",
-    Theme.DRAGON_BOAT: "🚣",
-    Theme.MID_AUTUMN: "🌕",
-    Theme.CHRISTMAS: "🎄",
-    Theme.DEFAULT: "🎨"
+    Theme.SPRING: "🌸", Theme.SUMMER: "🌞", Theme.AUTUMN: "🍂", Theme.WINTER: "❄️",
+    Theme.CHINESE_NEW_YEAR: "🧧", Theme.QINGMING: "🌿", Theme.DRAGON_BOAT: "🚣",
+    Theme.MID_AUTUMN: "🌕", Theme.CHRISTMAS: "🎄", Theme.DEFAULT: "🎨"
 }
 
-# 為當前主題加載相應的CSS樣式
+# === 修改：將主題 CSS 套用到 decorative-bg ===
 theme_css = load_css_for_theme(current_theme)
-
-# 將CSS樣式注入到頁面中，添加淡入淡出過渡效果，修改選擇器避免覆蓋關鍵UI元素
 st.markdown(f"""
 <style>
-/* 設置全局過渡效果 */
-.theme-transition {{
-    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+.decorative-bg {{
+    {theme_css}
 }}
-
-/* 頁面初始化時的淡入效果 */
-@keyframes fadeIn {{
-    from {{ opacity: 0; }}
-    to {{ opacity: 1; }}
-}}
-
-/* 將主題樣式修改為較低優先級，避免覆蓋Streamlit UI元素 */
-.stApp > header {{
-    z-index: 999 !important;
-}}
-
-.stApp > .main {{
-    z-index: 998 !important;
-}}
-
-/* 確保表單和互動元素可見 */
-input, textarea, button, .stButton, .stTextInput, .stTextArea, .stRadio, .stCheckbox, .stSelectbox {{
-    position: relative !important;
-    z-index: 10 !important;
-}}
-
-/* 主題相關動畫定義 */
-@keyframes hongbao {{
-    0%, 100% {{ transform: translateY(0) rotate(-5deg); }}
-    50% {{ transform: translateY(-10px) rotate(5deg); }}
-}}
-
-@keyframes lantern {{
-    0%, 100% {{ transform: translateY(0); }}
-    50% {{ transform: translateY(-8px); }}
-}}
-
-@keyframes float {{
-    0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-    50% {{ transform: translateY(-15px) rotate(5deg); }}
-}}
-
-@keyframes fall {{
-    0% {{ transform: translateY(-20px) rotate(0deg); }}
-    50% {{ transform: translateY(10px) rotate(15deg); }}
-    100% {{ transform: translateY(-20px) rotate(0deg); }}
-}}
-
-@keyframes sway {{
-    0%, 100% {{ transform: translateX(0) rotate(0deg); }}
-    50% {{ transform: translateX(10px) rotate(10deg); }}
-}}
-
-@keyframes boat {{
-    0% {{ transform: translateX(0) translateY(0); }}
-    25% {{ transform: translateX(20px) translateY(-5px); }}
-    50% {{ transform: translateX(40px) translateY(0); }}
-    75% {{ transform: translateX(20px) translateY(5px); }}
-    100% {{ transform: translateX(0) translateY(0); }}
-}}
-
-@keyframes gift {{
-    0%, 100% {{ transform: translateY(0) rotate(-5deg); }}
-    50% {{ transform: translateY(-10px) rotate(5deg); }}
-}}
-
-@keyframes snowfall {{
-    0% {{ transform: translateY(0) rotate(0deg); }}
-    100% {{ transform: translateY(100vh) rotate(360deg); }}
-}}
-
-/* 雪花樣式 */
-.snowflake {{
-    position: fixed;
-    top: -10%;
-    z-index: -2;
-    color: white;
-    font-size: 1.5em;
-    animation-name: snowfall;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    pointer-events: none;
-}}
-
-/* 修改後的主題樣式，避免使用body、html等全局選擇器 */
-.stApp {{
-    animation: fadeIn 0.8s ease-in-out forwards;
-}}
-
-/* 將主題樣式應用到特定容器 */
-.main .block-container {{
-    {theme_css.replace('body {', '.decorative-bg {').replace('.stApp {', '.main .block-container {')}
-}}
+/* 全局過渡及必要動畫 */
+.stApp {{ animation: fadeIn 0.8s ease-in-out forwards; }}
+@keyframes fadeIn {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
 </style>
+""", unsafe_allow_html=True)
 
-<!-- 添加一個裝飾性背景容器，而非直接修改body -->
-<div class="decorative-bg" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    pointer-events: none;
-"></div>
-
-<!-- 主題裝飾元素，使用絕對定位避免干擾正常內容流 -->
-<div style="position: fixed; top: 20px; right: 30px; font-size: 40px; opacity: 0.3; z-index: -1; pointer-events: none;" class="{current_theme.lower()}-icon">
-    {theme_icons.get(current_theme, "🎨")}
-</div>
-<!-- 輔助裝飾元素 -->
-<div style="position: fixed; bottom: 35px; left: 25px; font-size: 40px; opacity: 0.3; z-index: -1; pointer-events: none;" class="{current_theme.lower()}-icon2">
-    {theme_icons.get(current_theme, "🎨")}
+# 背景容器與主題圖示
+st.markdown(f"""
+<div class="decorative-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></div>
+<div style="position:fixed;bottom:20px;left:30px;font-size:40px;opacity:0.3;z-index:-1;pointer-events:none;">
+    {theme_icons.get(current_theme)}
 </div>
 """, unsafe_allow_html=True)
 
-# 添加主題裝飾元素的動畫CSS
-if current_theme == Theme.SPRING:
-    st.markdown("""
-    <style>
-    .spring-icon { animation: float 5s ease-in-out infinite; }
-    .spring-icon2 { animation: sway 6s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.SUMMER:
-    st.markdown("""
-    <style>
-    .summer-icon { animation: float 5s ease-in-out infinite; }
-    .summer-icon2 { animation: sway 6s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.AUTUMN:
-    st.markdown("""
-    <style>
-    .autumn-icon { animation: fall 8s ease-in-out infinite; }
-    .autumn-icon2 { animation: sway 6s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.WINTER:
-    st.markdown("""
-    <style>
-    .winter-icon, .winter-icon2 { animation: snowfall 8s linear infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.CHINESE_NEW_YEAR:
-    st.markdown("""
-    <style>
-    .春節-icon { animation: hongbao 5s ease-in-out infinite; }
-    .春節-icon2 { animation: lantern 4s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.DRAGON_BOAT:
-    st.markdown("""
-    <style>
-    .端午節-icon { animation: boat 8s linear infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.MID_AUTUMN:
-    st.markdown("""
-    <style>
-    .中秋節-icon2 { animation: lantern 4s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_theme == Theme.CHRISTMAS:
-    st.markdown("""
-    <style>
-    .聖誕節-icon2 { animation: gift 4s ease-in-out infinite; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 如果是聖誕節主題，添加雪花效果但確保不干擾UI
 if current_theme == Theme.CHRISTMAS:
-    snowflakes_html = create_snowflakes()
+    flakes = create_snowflakes()
     st.markdown(f"""
-    <div style='position: fixed; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: -2;'>
-        {snowflakes_html}
-    </div>
-    """, unsafe_allow_html=True)
+<div style='position:fixed;top:0;left:0;width:100%;height:100%;z-index:-2;pointer-events:none;'>
+    {flakes}
+</div>
+""", unsafe_allow_html=True)
+
+
 
 # 初始化 session_state
 if 'tab_selection' not in st.session_state:
