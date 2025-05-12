@@ -234,7 +234,7 @@ def create_snowflakes() -> str:
 
 # 頁面設定
 st.set_page_config(
-    page_title="游佳驥很屌的留言板",
+    page_title="創意互動留言板",
     page_icon="💬",
     layout="centered",
     initial_sidebar_state="collapsed"
